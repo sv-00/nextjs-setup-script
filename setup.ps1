@@ -24,6 +24,10 @@ Write-Host "📦 Installing Prisma, @prisma/client, and dotenv..."
 pnpm add @prisma/client dotenv
 pnpm add -D prisma
 
+# NEW: Approve postinstall build scripts for required dependencies
+Write-Host "🔒 Approving required build scripts (@prisma/client, prisma, sharp, etc.)..."
+pnpm approve-builds
+
 # Initialize Prisma
 Write-Host "📂 Running Prisma initialization (MongoDB)..."
 pnpm exec prisma init --datasource-provider mongodb
