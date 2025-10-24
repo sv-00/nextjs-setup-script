@@ -13,7 +13,7 @@ PowerShell script to set up a Next.js + Prisma + MongoDB app using pnpm
 
 Run this command from PowerShell in your project directory created:
 
-```irm https://raw.githubusercontent.com/sv-00/nextjs-setup-script/main/setup-nextjs.ps1 | iex```
+```irm https://raw.githubusercontent.com/sv-00/nextjs-setup-script/main/setup.ps1 | iex```
 
 
 ## 🪄 Troubleshoot
