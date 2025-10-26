@@ -3,7 +3,7 @@ PowerShell script to set up a Next.js + Prisma + MongoDB app using pnpm
 
 ## 🧩 Features
 
-- Creates a Next.js 15 app using PNPM
+- Creates a Next.js 16 app using PNPM
 - Adds Prisma + MongoDB + dotenv setup
 - Prompts for your `DATABASE_URL`
 - Injects global client (`src/lib/prisma.ts`)
