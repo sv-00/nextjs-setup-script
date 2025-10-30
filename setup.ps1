@@ -8,6 +8,15 @@ Write-Host "🚀 Initializing Next.js project in current directory using pnpm...
 pnpm dlx create-next-app@latest . --typescript --src-dir --app --eslint --tailwind
 
 # -----------------------------------------------------------
+# Configure pnpm global settings
+# -----------------------------------------------------------
+Write-Host "🧩 Configuring pnpm global settings..."
+pnpm config set reporter default
+pnpm config set color true
+pnpm config set loglevel info
+pnpm config list
+
+# -----------------------------------------------------------
 # Configure pnpm build script permissions (before dependencies)
 # -----------------------------------------------------------
 Write-Host "🛠️ Adding pnpm.onlyBuiltDependencies for Prisma & Sharp..."
