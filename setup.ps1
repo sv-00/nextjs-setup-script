@@ -40,16 +40,9 @@ switch ($linterChoice) {
 }
 
 # -----------------------------------------------------------
-# Setup environment FIRST
+# Create Next.js project FIRST
 # -----------------------------------------------------------
-Write-Host "🌍 Setting up environment variables..."
-if (Test-Path ".env") { Clear-Content ".env" }
-$databaseUrl = Read-Host "Enter your MongoDB connection string for DATABASE_URL"
-Add-Content ".env" "DATABASE_URL=`"$databaseUrl`""
-
-# -----------------------------------------------------------
-# Create Next.js project
-# -----------------------------------------------------------
+Write-Host "`n🔄 Creating Next.js project..."
 if ($pkg -eq "npm") {
     npx create-next-app@latest . --typescript --tailwind --src-dir --app --no-import-alias $linterFlag --yes
 } else {
@@ -70,6 +63,14 @@ if ($pkg -eq "npm") {
         $json | ConvertTo-Json -Depth 5 | Set-Content -Path $pkgJson -Encoding UTF8
     }
 }
+
+# -----------------------------------------------------------
+# Setup environment AFTER project creation
+# -----------------------------------------------------------
+Write-Host "`n🌍 Setting up environment variables..."
+if (Test-Path ".env") { Clear-Content ".env" }
+$databaseUrl = Read-Host "Enter your MongoDB connection string for DATABASE_URL"
+Add-Content ".env" "DATABASE_URL=`"$databaseUrl`""
 
 # -----------------------------------------------------------
 # Create lib folder and Prisma client
@@ -93,7 +94,7 @@ Set-Content -Path "src\lib\prisma.ts" -Value $prismaCode -Encoding UTF8
 # -----------------------------------------------------------
 # Install dependencies
 # -----------------------------------------------------------
-Write-Host "📦 Installing dependencies..."
+Write-Host "`n📦 Installing dependencies..."
 if ($pkg -eq "pnpm") {
     pnpm add @prisma/client dotenv
     pnpm add -D prisma
@@ -105,7 +106,7 @@ if ($pkg -eq "pnpm") {
 # -----------------------------------------------------------
 # Initialize Prisma
 # -----------------------------------------------------------
-Write-Host "📂 Initializing Prisma with MongoDB..."
+Write-Host "`n📂 Initializing Prisma with MongoDB..."
 if ($pkg -eq "pnpm") {
     pnpm exec prisma init --datasource-provider mongodb
 } else {
@@ -115,7 +116,7 @@ if ($pkg -eq "pnpm") {
 # -----------------------------------------------------------
 # Update Prisma schema with environment variable
 # -----------------------------------------------------------
-Write-Host "🔧 Updating Prisma schema to use env variable..."
+Write-Host "`n🔧 Updating Prisma schema to use env variable..."
 $schemaPath = "prisma\schema.prisma"
 if (Test-Path $schemaPath) {
     $schemaContent = Get-Content $schemaPath -Raw
@@ -129,7 +130,7 @@ if (Test-Path $schemaPath) {
 # -----------------------------------------------------------
 $layout = "src\app\layout.tsx"
 if (Test-Path $layout) {
-    Write-Host "💄 Updating layout..."
+    Write-Host "`n💄 Updating layout..."
     $html = Get-Content $layout -Raw
     $htmlUpdated = $html -replace '<html lang="en">', '<html lang="en" className="hydrated">'
     Set-Content -Path $layout -Value $htmlUpdated -Encoding UTF8
@@ -138,7 +139,7 @@ if (Test-Path $layout) {
 # -----------------------------------------------------------
 # Generate Prisma client (NOW with env vars available)
 # -----------------------------------------------------------
-Write-Host "⚙️ Generating Prisma Client..."
+Write-Host "`n⚙️ Generating Prisma Client..."
 if ($pkg -eq "pnpm") {
     pnpm exec prisma generate
 } else {
