@@ -1,47 +1,76 @@
 # next-prisma-init.ps1
 # -----------------------------------------------------------
 # Automated setup for Next.js 16 + TypeScript + Prisma (MongoDB)
-# with pnpm and build script handling (no approve-builds needed)
+# with package manager selection
 # -----------------------------------------------------------
 
-Write-Host "🚀 Initializing Next.js project in current directory using pnpm..."
-pnpm dlx create-next-app@latest . --typescript --src-dir --app --eslint --tailwind
+Write-Host "🚀 Next.js + Prisma (MongoDB) Setup"
+Write-Host "=============================================="
 
 # -----------------------------------------------------------
-# Configure pnpm global settings
+# Package manager selection
 # -----------------------------------------------------------
-Write-Host "🧩 Configuring pnpm global settings..."
-pnpm config set reporter default
-pnpm config set color true
-pnpm config set loglevel info
-pnpm config list
+Write-Host "`n📦 Select Package Manager:"
+Write-Host "1) pnpm (recommended)"
+Write-Host "2) npm"
+$choice = Read-Host "Enter choice (1 or 2)"
 
-# -----------------------------------------------------------
-# Configure pnpm build script permissions (before dependencies)
-# -----------------------------------------------------------
-Write-Host "🛠️ Adding pnpm.onlyBuiltDependencies for Prisma & Sharp..."
-$pkgJson = "package.json"
-if (Test-Path $pkgJson) {
-    $json = Get-Content $pkgJson -Raw | ConvertFrom-Json
-    if (-not $json.pnpm) { $json | Add-Member -MemberType NoteProperty -Name "pnpm" -Value @{} }
-    $json.pnpm.onlyBuiltDependencies = @("@prisma/client", "prisma", "sharp")
-    $json | ConvertTo-Json -Depth 5 | Set-Content -Path $pkgJson -Encoding UTF8
-    Write-Host "✅ Updated pnpm.onlyBuiltDependencies in package.json"
+if ($choice -eq "2") {
+    $pkg = "npm"
+    Write-Host "Using npm..."
+} else {
+    $pkg = "pnpm" 
+    Write-Host "Using pnpm..."
 }
 
 # -----------------------------------------------------------
-# Ensure src/lib folder exists for reusable utilities
+# Linter selection
+# -----------------------------------------------------------
+Write-Host "`n🔍 Select Linter:"
+Write-Host "1) ESLint (recommended)"
+Write-Host "2) Biome"
+Write-Host "3) None"
+$linterChoice = Read-Host "Enter choice (1-3)"
+
+$linterFlag = ""
+switch ($linterChoice) {
+    "2" { $linterFlag = "--biome" }
+    "3" { $linterFlag = "--no-eslint" }
+    default { $linterFlag = "--eslint" }
+}
+
+# -----------------------------------------------------------
+# Create Next.js project
+# -----------------------------------------------------------
+if ($pkg -eq "npm") {
+    npx create-next-app@latest . --typescript --tailwind --src-dir --app --no-import-alias $linterFlag --yes
+} else {
+    pnpm dlx create-next-app@latest . --typescript --tailwind --src-dir --app --no-import-alias $linterFlag
+    
+    # Keep your original pnpm config
+    Write-Host "🧩 Configuring pnpm..."
+    pnpm config set reporter default
+    pnpm config set color true
+    pnpm config set loglevel info
+    
+    Write-Host "🛠️ Adding pnpm.onlyBuiltDependencies..."
+    $pkgJson = "package.json"
+    if (Test-Path $pkgJson) {
+        $json = Get-Content $pkgJson -Raw | ConvertFrom-Json
+        if (-not $json.pnpm) { $json | Add-Member -MemberType NoteProperty -Name "pnpm" -Value @{} }
+        $json.pnpm.onlyBuiltDependencies = @("@prisma/client", "prisma", "sharp")
+        $json | ConvertTo-Json -Depth 5 | Set-Content -Path $pkgJson -Encoding UTF8
+    }
+}
+
+# -----------------------------------------------------------
+# Create lib folder and Prisma client
 # -----------------------------------------------------------
 if (-not (Test-Path "src\lib")) { 
-    Write-Host "📁 Creating lib folder..."
     New-Item -ItemType Directory -Path "src\lib" | Out-Null 
 }
 
-# -----------------------------------------------------------
-# Create Prisma client singleton file (avoids hot reload issues)
-# -----------------------------------------------------------
-Write-Host "📝 Creating src/lib/prisma.ts..."
-$prismaFile = "src\lib\prisma.ts"
+Write-Host "📝 Creating Prisma client..."
 $prismaCode = @'
 import { PrismaClient } from "@prisma/client";
 
@@ -51,48 +80,44 @@ export const prisma = globalForPrisma.prisma || new PrismaClient();
 
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
 '@
-Set-Content -Path $prismaFile -Value $prismaCode -Encoding UTF8
+Set-Content -Path "src\lib\prisma.ts" -Value $prismaCode -Encoding UTF8
 
 # -----------------------------------------------------------
-# Install Prisma and environment dependencies
+# Install dependencies
 # -----------------------------------------------------------
-Write-Host "📦 Installing Prisma, @prisma/client, and dotenv..."
-pnpm add @prisma/client dotenv
-pnpm add -D prisma
-
-# -----------------------------------------------------------
-# Initialize Prisma for MongoDB datasource
-# -----------------------------------------------------------
-Write-Host "📂 Running Prisma initialization (MongoDB)..."
-pnpm exec prisma init --datasource-provider mongodb
-
-# -----------------------------------------------------------
-# Ensure dotenv import exists in prisma.config.ts (if generated)
-# -----------------------------------------------------------
-$prismaConfig = "prisma.config.ts"
-if (Test-Path $prismaConfig) {
-    Write-Host "🔧 Adding import 'dotenv/config' to prisma.config.ts (if missing)..."
-    $config = Get-Content $prismaConfig
-    if ($config -notmatch 'dotenv/config') {
-        $fixed = @("import `"dotenv/config`";") + $config
-        Set-Content -Path $prismaConfig -Value $fixed -Encoding UTF8
-    }
+Write-Host "📦 Installing dependencies..."
+if ($pkg -eq "pnpm") {
+    pnpm add @prisma/client dotenv
+    pnpm add -D prisma
+} else {
+    npm install @prisma/client dotenv
+    npm install -D prisma
 }
 
 # -----------------------------------------------------------
-# Prepare .env with MongoDB connection string prompt
+# Initialize Prisma
 # -----------------------------------------------------------
-Write-Host "`n🌍 Setting up environment variables..."
+Write-Host "📂 Initializing Prisma with MongoDB..."
+if ($pkg -eq "pnpm") {
+    pnpm exec prisma init --datasource-provider mongodb
+} else {
+    npx prisma init --datasource-provider mongodb
+}
+
+# -----------------------------------------------------------
+# Setup environment
+# -----------------------------------------------------------
+Write-Host "🌍 Setting up environment variables..."
 if (Test-Path ".env") { Clear-Content ".env" }
 $databaseUrl = Read-Host "Enter your MongoDB connection string for DATABASE_URL"
 Add-Content ".env" "DATABASE_URL=`"$databaseUrl`""
 
 # -----------------------------------------------------------
-# Add a hydration class in layout.tsx <html> tag
+# Update layout
 # -----------------------------------------------------------
 $layout = "src\app\layout.tsx"
 if (Test-Path $layout) {
-    Write-Host "💄 Adding className='hydrated' to <html> in layout.tsx..."
+    Write-Host "💄 Updating layout..."
     $html = Get-Content $layout -Raw
     $htmlUpdated = $html -replace '<html lang="en">', '<html lang="en" className="hydrated">'
     Set-Content -Path $layout -Value $htmlUpdated -Encoding UTF8
@@ -102,7 +127,15 @@ if (Test-Path $layout) {
 # Generate Prisma client
 # -----------------------------------------------------------
 Write-Host "⚙️ Generating Prisma Client..."
-pnpm exec prisma generate
+if ($pkg -eq "pnpm") {
+    pnpm exec prisma generate
+} else {
+    npx prisma generate
+}
 
-Write-Host "`n✅ Setup complete! You can now run:"
-Write-Host "👉 pnpm dev"
+Write-Host "`n✅ Setup complete!"
+if ($pkg -eq "pnpm") {
+    Write-Host "👉 Run: pnpm dev"
+} else {
+    Write-Host "👉 Run: npm run dev"
+}
