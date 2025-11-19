@@ -40,6 +40,14 @@ switch ($linterChoice) {
 }
 
 # -----------------------------------------------------------
+# Setup environment FIRST
+# -----------------------------------------------------------
+Write-Host "🌍 Setting up environment variables..."
+if (Test-Path ".env") { Clear-Content ".env" }
+$databaseUrl = Read-Host "Enter your MongoDB connection string for DATABASE_URL"
+Add-Content ".env" "DATABASE_URL=`"$databaseUrl`""
+
+# -----------------------------------------------------------
 # Create Next.js project
 # -----------------------------------------------------------
 if ($pkg -eq "npm") {
@@ -105,12 +113,16 @@ if ($pkg -eq "pnpm") {
 }
 
 # -----------------------------------------------------------
-# Setup environment
+# Update Prisma schema with environment variable
 # -----------------------------------------------------------
-Write-Host "🌍 Setting up environment variables..."
-if (Test-Path ".env") { Clear-Content ".env" }
-$databaseUrl = Read-Host "Enter your MongoDB connection string for DATABASE_URL"
-Add-Content ".env" "DATABASE_URL=`"$databaseUrl`""
+Write-Host "🔧 Updating Prisma schema to use env variable..."
+$schemaPath = "prisma\schema.prisma"
+if (Test-Path $schemaPath) {
+    $schemaContent = Get-Content $schemaPath -Raw
+    # Replace the example URL with env variable
+    $updatedSchema = $schemaContent -replace 'env\("DATABASE_URL"\)', 'env("DATABASE_URL")'
+    Set-Content -Path $schemaPath -Value $updatedSchema -Encoding UTF8
+}
 
 # -----------------------------------------------------------
 # Update layout
@@ -124,7 +136,7 @@ if (Test-Path $layout) {
 }
 
 # -----------------------------------------------------------
-# Generate Prisma client
+# Generate Prisma client (NOW with env vars available)
 # -----------------------------------------------------------
 Write-Host "⚙️ Generating Prisma Client..."
 if ($pkg -eq "pnpm") {
